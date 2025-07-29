@@ -1,0 +1,4 @@
+#!/bin/bash
+/Applications/PICO-8.app/Contents/MacOS/pico8 main.p8 -export "build/index.html"
+vim -es build/index.html <<< ":%s/95v\(\w\)/100v\1/g | wq"
+zip build/build-$(date +"%Y-%m-%d").zip build/index.*
