@@ -9,8 +9,8 @@ title = scene:extend({
   end,
 
   draw = function(_ENV)
-    cls()
-    printc("game name", 16, 7)
+    cls(1)
+    printc("tiny tetris", 16, 7)
     printc("x start", 32, 6)
   end
 })

@@ -42,3 +42,19 @@ end
 function round(i)
   return (i % 1 >= 0.5 and ceil or flr)(i)
 end
+
+-- left padt text
+function lpad(str,len,char)
+	str=tostr(str)
+	len=len or 2
+	char=char or "0"
+	if (#str==len) return str
+	return char..lpad(str, len-1)
+end
+
+-- print with custom font
+function font(txt,x,y,c)
+	poke(0x5f58,0x81)
+	?txt,x,y,c
+	poke(0x5f58,0x80)
+end

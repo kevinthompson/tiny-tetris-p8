@@ -125,7 +125,9 @@ entity = game_object:extend({
     _ENV:after_destroy()
   end,
 
-  animate = function(_ENV, name)
+  animate = animate,
+
+  play = function(_ENV, name)
     local animation = animations[name]
 
     if (animation != current_animation) then

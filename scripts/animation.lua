@@ -1,16 +1,16 @@
-function animate(obj, values, frames, easing)
+function animate(_ENV, values, frames, easing)
   frames = frames or 30
   easing = easing or ease_out
 
   local initial = {}
   for key, _ in pairs(values) do
-    initial[key] = obj[key]
+    initial[key] = _ENV[key]
   end
 
-  obj.async(function()
+  async(function()
     for i = 1, frames do
       for key, value in pairs(values) do
-        obj[key] = lerp(initial[key], value, easing(i / frames))
+        _ENV[key] = lerp(initial[key], value, easing(i / frames))
       end
 
       yield()
