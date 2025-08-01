@@ -17,32 +17,62 @@ game = scene:extend({
   end,
 
   update = function(_ENV)
-    local nx = current_piece.x
-    local ny = current_piece.y
+    local cx = current_piece.x
+    local cy = current_piece.y
 
     drop_timer -= 1
 
-    if (btnp(0)) nx -= 1
-    if (btnp(1)) nx += 1
-    if (btnp(2)) _noop() -- todo: quick drop
-    if (btnp(4)) current_piece:rotate(-1)
-    if (btnp(5)) current_piece:rotate(1)
+    if btnp(0) then
+      cx -= 1
+    elseif btnp(1) then
+      cx += 1
+    elseif btnp(2) then
+      _noop() -- todo: quick drop
+    elseif btnp(4) then
+      if _ENV:rotate_current_piece(-1) then
+        drop_timer = 60
+      end
+    elseif btnp(5) then
+      if _ENV:rotate_current_piece(1) then
+        drop_timer = 60
+      end
+    end
 
     -- move down
     if drop_timer <= 0 or btnp(3) then
-      ny += 1
+      cy += 1
       drop_timer = 60
     end
 
     -- apply movement
-    if _ENV:is_valid_move(current_piece, nx, ny) then
-      current_piece.x = nx
-      current_piece.y = ny
-    elseif ny > current_piece.y then
+    if _ENV:is_valid_position(current_piece, cx, cy) then
+      current_piece.x = cx
+      current_piece.y = cy
+    elseif cy > current_piece.y then
       _ENV:add_piece_to_grid(current_piece)
       _ENV:evaluate_lines()
       _ENV:set_current_piece()
     end
+  end,
+
+  rotate_current_piece = function(_ENV, dir)
+    local cx, cy = current_piece.x, current_piece.y
+    current_piece:rotate(dir)
+
+    if _ENV:is_valid_position(current_piece, cx, cy) then
+      return true
+    end
+
+    for offset in all({{-1, 0},{1, 0},{0, 1}}) do
+      if _ENV:is_valid_position(current_piece, cx + offset[1], cy + offset[2]) then
+        current_piece.x += offset[1]
+        current_piece.y += offset[2]
+        return true
+      end
+    end
+
+    current_piece:rotate(dir * -1)
+    return false
   end,
 
   draw = function(_ENV)
@@ -108,7 +138,7 @@ game = scene:extend({
     return flr(rnd(#piece_data)) + 1
   end,
 
-  is_valid_move = function(_ENV, test_piece, x, y)
+  is_valid_position = function(_ENV, test_piece, x, y)
     local data = current_piece.data
 
     for dy = 1, #data do
