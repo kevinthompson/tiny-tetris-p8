@@ -86,9 +86,7 @@ entity = game_object:extend({
     sort = layer * 1000 + y
     visible = aabb(_ENV, screen)
 
-    if visible then
-      add(entity.visible, _ENV)
-    elseif destroy_off_screen then
+    if not visible and destroy_off_screen then
       e:destroy()
     end
 

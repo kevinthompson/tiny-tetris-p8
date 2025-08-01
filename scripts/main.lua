@@ -6,6 +6,7 @@ poke(0x5f2c, 3)   -- set resolution to 64x64
 global = _ENV
 
 -- config
+entity.gravity = 0
 custom_transition_table = [[
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
   1,1,129,129,129,129,129,129,129,129,0,0,0,0,0
@@ -25,7 +26,6 @@ custom_transition_table = [[
   15,143,143,134,134,134,134,5,5,5,133,133,128,128,0
 ]]
 
-
 -- initialize cartridge
 function _init()
   scene:load(game)
@@ -34,9 +34,7 @@ end
 -- update current scene
 function _update60()
   -- update entities
-  entity.visible = {}
   entity:each("update")
-  sort(entity.visible, "sort")
 
   -- update coroutines
   async:update()
@@ -46,6 +44,9 @@ function _update60()
 
   -- update camera
   screen:update()
+
+  -- sort entities
+  sort(entity.objects, "sort")
 end
 
 -- draw current scene

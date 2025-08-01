@@ -2,12 +2,11 @@ piece = entity:extend({
   x = 4,
   y = 3,
   data = {},
+  preview = false,
 
   after_init = function(_ENV)
     data = piece_data[id]
-  end,
-
-  update = function(_ENV)
+    layer = preview and 1 or 2
   end,
 
   draw = function(_ENV)
@@ -16,7 +15,7 @@ piece = entity:extend({
 
       for dx = 1, #data[1] do
         local sx = 3 + (x + dx - 2) * 5
-        if (data[dy][dx] == 1) spr(id, sx, sy)
+        if (data[dy][dx] == 1) spr(preview and 8 or id, sx, sy)
       end
     end
   end,

@@ -57,6 +57,17 @@ game = scene:extend({
       _ENV:evaluate_lines()
       _ENV:set_current_piece()
     end
+
+    -- update preview
+    preview.x = current_piece.x
+    preview.y = current_piece.y
+    preview.data = current_piece.data
+
+    while _ENV:is_valid_position(current_piece, preview.x, preview.y) do
+      preview.y += 1
+    end
+
+    preview.y -= 1
   end,
 
   draw = function(_ENV)
@@ -114,7 +125,9 @@ game = scene:extend({
   end,
 
   set_current_piece = function(_ENV)
-    current_piece = piece({ id = next_piece or _ENV:get_random_piece_id() })
+    local piece_id = next_piece or _ENV:get_random_piece_id()
+    current_piece = piece({ id = piece_id })
+    preview = piece({ id = piece_id, preview = true })
     next_piece = _ENV:get_random_piece_id()
   end,
 
@@ -185,6 +198,7 @@ game = scene:extend({
     end
 
     grid_piece:destroy()
+    preview:destroy()
   end,
 
   evaluate_lines = function(_ENV)
