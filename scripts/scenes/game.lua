@@ -6,27 +6,42 @@ game = scene:extend({
     -- create empty grid
     grid = {}
     for y = 1, 16 do
-      grid[y] = {0,0,0,0,0,0,0,0,0}
+      add(grid, {0,0,0,0,0,0,0,0,0})
     end
 
     drop_timer = 60
+    lines = 0
+    level = 1
+
     _ENV:set_current_piece()
   end,
 
   update = function(_ENV)
-    _ENV:handle_piece_movement()
+    local nx = current_piece.x
+    local ny = current_piece.y
 
-    for y = 16, 1, -1 do
-      local total = 0
+    drop_timer -= 1
 
-      for x = 1, 9 do
-        total += grid[y][x]
-      end
+    if (btnp(0)) nx -= 1
+    if (btnp(1)) nx += 1
+    if (btnp(2)) _noop() -- todo: quick drop
+    if (btnp(4)) current_piece:rotate(-1)
+    if (btnp(5)) current_piece:rotate(1)
 
-      if total == 0 and y > 1 then
-        grid[y] = grid[y - 1]
-        grid[y - 1] = {0,0,0,0,0,0,0,0,0}
-      end
+    -- move down
+    if drop_timer <= 0 or btnp(3) then
+      ny += 1
+      drop_timer = 60
+    end
+
+    -- apply movement
+    if _ENV:is_valid_move(current_piece, nx, ny) then
+      current_piece.x = nx
+      current_piece.y = ny
+    elseif ny > current_piece.y then
+      _ENV:add_piece_to_grid(current_piece)
+      _ENV:evaluate_lines()
+      _ENV:set_current_piece()
     end
   end,
 
@@ -71,11 +86,11 @@ game = scene:extend({
 
     -- draw line count
     spr(35, 51, 26, 2, 1)
-    ? lpad(0), 51, 30, 7
+    ? lpad(lines), 51, 30, 7
 
     -- draw level number
     spr(33, 51, 39, 2, 1)
-    ? lpad(0), 51, 43, 7
+    ? lpad(level), 51, 43, 7
 
     -- draw high score
     spr(51, 51, 52, 2, 1)
@@ -91,41 +106,6 @@ game = scene:extend({
 
   get_random_piece_id = function(_ENV)
     return flr(rnd(#piece_data)) + 1
-  end,
-
-  handle_piece_movement = function(_ENV)
-    if (not current_piece) return
-
-    local nx = current_piece.x
-    local ny = current_piece.y
-
-    drop_timer -= 1
-
-    if (btnp(0)) nx -= 1
-    if (btnp(1)) nx += 1
-    if (btnp(2)) _noop() -- todo: quick drop
-    if (btnp(4)) current_piece:rotate(-1)
-    if (btnp(5)) current_piece:rotate(1)
-
-    -- move down
-    if drop_timer <= 0 or btnp(3) then
-      ny += 1
-      drop_timer = 60
-    end
-
-    -- apply movement
-    if _ENV:is_valid_move(current_piece, nx, ny) then
-      current_piece.x = nx
-      current_piece.y = ny
-    elseif ny > current_piece.y then
-      -- when piece stops, evaluate completed lines
-      -- remove completed lines
-      -- increment line count
-      -- if line count >= 10 increment level count
-      -- if level count > hi update high score
-      _ENV:add_piece_to_grid(current_piece)
-      _ENV:set_current_piece()
-    end
   end,
 
   is_valid_move = function(_ENV, test_piece, x, y)
@@ -164,5 +144,30 @@ game = scene:extend({
     end
 
     grid_piece:destroy()
+  end,
+
+  evaluate_lines = function(_ENV)
+    -- remove completed lines
+    -- increment line count
+    -- if line count >= 10 increment level count
+    -- if level count > hi update high score
+
+    -- remove completed lines
+    for y = #grid, 1, -1 do
+      local total = 0
+
+      for x = 1, #grid[1] do
+        if (grid[y][x] != 0) total += 1
+      end
+
+      if total == #grid[1] then
+        deli(grid, y)
+        lines += 1
+      end
+    end
+
+    for i = 1, 16 - #grid do
+      add(grid, {0,0,0,0,0,0,0,0,0}, 1)
+    end
   end
 })
