@@ -3,14 +3,44 @@ game = scene:extend({
     -- set palette
     pal(split("1,129,139,140,5,6,7,8,9,10,11,12,13,14,15,0"), 1)
 
-    -- create grid
+    -- create empty grid
     grid = {}
-    for y = 1, 144 do
-      add(grid, 1)
+    for y = 1, 16 do
+      grid[y] = {0,0,0,0,0,0,0,0,0}
     end
+
+    current_piece = piece({
+      data = pieces[1]
+    })
+
+    -- select next piece
   end,
 
   update = function(_ENV)
+    -- if current piece
+      -- move current piece down
+      -- if any part of current piece would hit another block
+      -- piece stops and is committed to grid
+      -- when piece stops, evaluate completed lines
+      -- remove completed lines
+      -- increment line count
+      -- if line count >= 10 increment level count
+      -- if level count > hi update high score
+    -- next piece becomes current piece
+
+    for y = 16, 1, -1 do
+      local total = 0
+
+      for x = 1, 9 do
+        total += grid[y][x]
+      end
+
+      if total == 0 and y > 1 then
+        grid[y] = grid[y - 1]
+        grid[y - 1] = {0,0,0,0,0,0,0,0,0}
+      end
+    end
+
   end,
 
   draw = function(_ENV)
@@ -21,11 +51,14 @@ game = scene:extend({
     local period = 12
     local speed = 5
     local amp = 1.5
+    local offset = t() * speed
 
-    -- todo: improve performance
     for y = -step, 64, step do
       for x = 0, 64 do
-        pset(x, (t() * speed / 2) % step + y + sin((x + t() * speed)/period) * amp, 1)
+        if x == 0 or x >= 48 then
+          local py = (offset / 2) % step + y + sin((x + offset)/period) * amp
+          pset(x, py, 1)
+        end
       end
     end
 
@@ -36,10 +69,13 @@ game = scene:extend({
     line(2,62,47,62,6)
 
     -- draw grid
-    for i = 1, #grid do
-      local x = 3 + ((i - 1) % 9) * 5
-      local y = -18 + ((i - 1) \ 9) * 5
-      spr(grid[i], x, y)
+    for iy, row in ipairs(grid) do
+      local y = -18 + (iy - 1) * 5
+
+      for ix = 1, 9 do
+        local x = 3 + (ix - 1) * 5
+        spr(grid[iy][ix], x, y)
+      end
     end
 
     -- draw next piece
@@ -64,10 +100,10 @@ game = scene:extend({
 
 pieces = {
   {
-    1, 1, 0, 0,
-    1, 0, 0, 0,
-    1, 0, 0, 0,
-    0, 0, 0, 0,
+    {0, 1, 1, 0 },
+    {0, 1, 0, 0 },
+    {0, 1, 0, 0 },
+    {0, 0, 0, 0 },
   },
   {
     1, 1, 0, 0,
@@ -106,3 +142,69 @@ pieces = {
     0, 0, 0, 0,
   }
 }
+
+piece = entity:extend({
+  x = 4,
+  y = 1,
+  data = {},
+
+  after_init = function(_ENV)
+    drop_timer = 60
+  end,
+
+  update = function(_ENV)
+    local nx = x
+    local ny = y
+
+    drop_timer -= 1
+
+    if (btnp(0)) nx -= 1
+    if (btnp(1)) nx += 1
+    if (btnp(2)) _noop() -- todo: quick drop
+    if (btnp(4)) _ENV:rotate(-1)
+    if (btnp(5)) _ENV:rotate(1)
+
+    -- move down
+    if drop_timer <= 0 or btnp(3) then
+      ny += 1
+      drop_timer = 60
+    end
+
+    -- todo: if position valid
+    x = nx
+    y = ny
+    -- else
+    -- copy current position to grid
+    -- spawn next piece
+  end,
+
+  rotate = function(_ENV, dir)
+    local new_data = {}
+    for c = 1, 4 do
+      new_data[c] = {}
+    end
+
+    for r = 1, 4 do
+      for c = 1, 4 do
+        if dir == 1 then
+          new_data[c][5 - r] = data[r][c]
+        else
+          new_data[5 - c][r] = data[r][c]
+        end
+      end
+    end
+
+    data = new_data
+  end,
+
+  draw = function(_ENV)
+    for iy, row in ipairs(data) do
+      local sy = -18 + (y + iy - 1) * 5
+
+      for ix, value in ipairs(row) do
+        local sx = 3 + (x + ix - 1) * 5
+        if (value == 1) spr(1, sx, sy)
+      end
+    end
+  end
+})
