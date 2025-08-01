@@ -27,7 +27,11 @@ game = scene:extend({
     elseif btnp(1) then
       cx += 1
     elseif btnp(2) then
-      _noop() -- todo: quick drop
+      while _ENV:is_valid_position(current_piece, cx, cy) do
+        cy += 1
+      end
+
+      current_piece.y = cy - 1
     elseif btnp(4) then
       if _ENV:rotate_current_piece(-1) then
         drop_timer = 60
@@ -55,26 +59,6 @@ game = scene:extend({
     end
   end,
 
-  rotate_current_piece = function(_ENV, dir)
-    local cx, cy = current_piece.x, current_piece.y
-    current_piece:rotate(dir)
-
-    if _ENV:is_valid_position(current_piece, cx, cy) then
-      return true
-    end
-
-    for offset in all({{-1, 0},{1, 0},{0, 1}}) do
-      if _ENV:is_valid_position(current_piece, cx + offset[1], cy + offset[2]) then
-        current_piece.x += offset[1]
-        current_piece.y += offset[2]
-        return true
-      end
-    end
-
-    current_piece:rotate(dir * -1)
-    return false
-  end,
-
   draw = function(_ENV)
     cls(2)
 
@@ -87,7 +71,7 @@ game = scene:extend({
 
     for y = -step, 64, step do
       for x = 0, 64 do
-        if x == 0 or x >= 48 then
+        if x == 0 or x >= 48 or y > 56 then
           local py = (offset / 2) % step + y + sin((x + offset)/period) * amp
           pset(x, py, 1)
         end
@@ -138,6 +122,26 @@ game = scene:extend({
     return flr(rnd(#piece_data)) + 1
   end,
 
+  rotate_current_piece = function(_ENV, dir)
+    local cx, cy = current_piece.x, current_piece.y
+    current_piece:rotate(dir)
+
+    if _ENV:is_valid_position(current_piece, cx, cy) then
+      return true
+    end
+
+    for offset in all({{-1, 0},{1, 0},{0, 1}}) do
+      if _ENV:is_valid_position(current_piece, cx + offset[1], cy + offset[2]) then
+        current_piece.x += offset[1]
+        current_piece.y += offset[2]
+        return true
+      end
+    end
+
+    current_piece:rotate(dir * -1)
+    return false
+  end,
+
   is_valid_position = function(_ENV, test_piece, x, y)
     local data = current_piece.data
 
@@ -161,14 +165,21 @@ game = scene:extend({
   end,
 
   add_piece_to_grid = function(_ENV, grid_piece)
-    local gy = grid_piece.y
-    local gx = grid_piece.x
+    local py = grid_piece.y
+    local px = grid_piece.x
     local data = grid_piece.data
 
     for dy = 1, #data do
       for dx = 1, #data[1] do
         if data[dy][dx] == 1 then
-          grid[dy - 1 + gy][dx - 1 + gx] = grid_piece.id
+          local gy = dy - 1 + py
+          local gx = dx - 1 + px
+
+          if gy <= 4 then
+            extcmd("reset")
+          end
+
+          grid[gy][gx] = grid_piece.id
         end
       end
     end
@@ -177,10 +188,7 @@ game = scene:extend({
   end,
 
   evaluate_lines = function(_ENV)
-    -- remove completed lines
-    -- increment line count
     -- if line count >= 10 increment level count
-    -- if level count > hi update high score
 
     -- remove completed lines
     for y = #grid, 1, -1 do
@@ -198,6 +206,14 @@ game = scene:extend({
 
     for i = 1, 16 - #grid do
       add(grid, {0,0,0,0,0,0,0,0,0}, 1)
+    end
+
+    if lines >= 10 then
+      -- todo: level change animation
+      -- todo: increase drop speed
+      -- todo: high score
+      level += 1
+      lines %= 10
     end
   end
 })
