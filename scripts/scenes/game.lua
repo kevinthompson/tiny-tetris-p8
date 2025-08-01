@@ -9,24 +9,12 @@ game = scene:extend({
       grid[y] = {0,0,0,0,0,0,0,0,0}
     end
 
-    current_piece = piece({
-      data = pieces[1]
-    })
-
-    -- select next piece
+    drop_timer = 60
+    _ENV:set_current_piece()
   end,
 
   update = function(_ENV)
-    -- if current piece
-      -- move current piece down
-      -- if any part of current piece would hit another block
-      -- piece stops and is committed to grid
-      -- when piece stops, evaluate completed lines
-      -- remove completed lines
-      -- increment line count
-      -- if line count >= 10 increment level count
-      -- if level count > hi update high score
-    -- next piece becomes current piece
+    _ENV:handle_piece_movement()
 
     for y = 16, 1, -1 do
       local total = 0
@@ -40,7 +28,6 @@ game = scene:extend({
         grid[y - 1] = {0,0,0,0,0,0,0,0,0}
       end
     end
-
   end,
 
   draw = function(_ENV)
@@ -80,7 +67,7 @@ game = scene:extend({
 
     -- draw next piece
     spr(49, 51, 2, 2, 1)
-    spr(23, 51, 6)
+    spr(next_piece + 16, 51, 6)
 
     -- draw line count
     spr(35, 51, 26, 2, 1)
@@ -96,68 +83,29 @@ game = scene:extend({
 
     entity:each("draw")
   end,
-})
 
-pieces = {
-  {
-    {1, 0, 0 },
-    {1, 1, 1 },
-    {0, 0, 0 },
-  },
-  {
-    {0, 0, 1 },
-    {1, 1, 1 },
-    {0, 0, 0 },
-  },
-  {
-    { 0, 1, 0, 0 },
-    { 0, 1, 0, 0 },
-    { 0, 1, 0, 0 },
-    { 0, 1, 0, 0 },
-  },
-  {
-    { 1, 1, 0 },
-    { 0, 1, 1 },
-    { 0, 0, 0 },
-  },
-  {
-    { 0, 1, 1, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 0, 0, 0 },
-    { 0, 0, 0, 0 },
-  },
-  {
-    { 0, 1, 0 },
-    { 1, 1, 1 },
-    { 0, 0, 0 },
-  },
-  {
-    { 0, 1, 1 },
-    { 1, 1, 0 },
-    { 0, 0, 0 },
-  }
-}
-
-piece = entity:extend({
-  x = 4,
-  y = 1,
-  data = {},
-
-  after_init = function(_ENV)
-    drop_timer = 60
+  set_current_piece = function(_ENV)
+    current_piece = piece({ id = next_piece or _ENV:get_random_piece_id() })
+    next_piece = _ENV:get_random_piece_id()
   end,
 
-  update = function(_ENV)
-    local nx = x
-    local ny = y
+  get_random_piece_id = function(_ENV)
+    return flr(rnd(#piece_data)) + 1
+  end,
+
+  handle_piece_movement = function(_ENV)
+    if (not current_piece) return
+
+    local nx = current_piece.x
+    local ny = current_piece.y
 
     drop_timer -= 1
 
     if (btnp(0)) nx -= 1
     if (btnp(1)) nx += 1
     if (btnp(2)) _noop() -- todo: quick drop
-    if (btnp(4)) _ENV:rotate(-1)
-    if (btnp(5)) _ENV:rotate(1)
+    if (btnp(4)) current_piece:rotate(-1)
+    if (btnp(5)) current_piece:rotate(1)
 
     -- move down
     if drop_timer <= 0 or btnp(3) then
@@ -165,44 +113,56 @@ piece = entity:extend({
       drop_timer = 60
     end
 
-    -- todo: if position valid
-    x = nx
-    y = ny
-    -- else
-    -- copy current position to grid
-    -- spawn next piece
+    -- apply movement
+    if _ENV:is_valid_move(current_piece, nx, ny) then
+      current_piece.x = nx
+      current_piece.y = ny
+    elseif ny > current_piece.y then
+      -- when piece stops, evaluate completed lines
+      -- remove completed lines
+      -- increment line count
+      -- if line count >= 10 increment level count
+      -- if level count > hi update high score
+      _ENV:add_piece_to_grid(current_piece)
+      _ENV:set_current_piece()
+    end
   end,
 
-  rotate = function(_ENV, dir)
-    local rows = #data
-    local cols = #data[1]
+  is_valid_move = function(_ENV, test_piece, x, y)
+    local data = current_piece.data
 
-    local new_data = {}
-    for r = 1, rows do
-      new_data[r] = {}
-    end
+    for dy = 1, #data do
+      for dx = 1, #data[1] do
+        if data[dy][dx] == 1 then
+          local gy = dy + y - 1
+          local gx = dx + x - 1
 
-    for r = 1, rows do
-      for c = 1, cols do
-        if dir == 1 then
-          new_data[c][rows + 1 - r] = data[r][c]
-        else
-          new_data[cols + 1 - c][r] = data[r][c]
+          if gy > #grid
+          or gx < 1
+          or gx > #grid[1]
+          or grid[gy][gx] != 0 then
+            return false
+          end
         end
       end
     end
 
-    data = new_data
+    return true
   end,
 
-  draw = function(_ENV)
-    for iy, row in ipairs(data) do
-      local sy = -18 + (y + iy - 1) * 5
+  add_piece_to_grid = function(_ENV, grid_piece)
+    local gy = grid_piece.y
+    local gx = grid_piece.x
+    local data = grid_piece.data
 
-      for ix, value in ipairs(row) do
-        local sx = 3 + (x + ix - 1) * 5
-        if (value == 1) spr(1, sx, sy)
+    for dy = 1, #data do
+      for dx = 1, #data[1] do
+        if data[dy][dx] == 1 then
+          grid[dy - 1 + gy][dx - 1 + gx] = grid_piece.id
+        end
       end
     end
+
+    grid_piece:destroy()
   end
 })
