@@ -48,7 +48,7 @@ function lpad(str,len,char)
 	str=tostr(str)
 	len=len or 2
 	char=char or "0"
-	if (#str==len) return str
+	if (#str>=len) return str
 	return char..lpad(str, len-1)
 end
 

@@ -3,6 +3,9 @@ game = scene:extend({
     -- set palette
     pal(split("1,129,139,140,5,6,7,8,9,10,11,12,13,14,15,0"), 1)
 
+    -- define line clear points
+    line_points = {1,3,6,10}
+
     -- create empty grid
     grid = {}
     for y = 1, 16 do
@@ -10,15 +13,19 @@ game = scene:extend({
     end
 
     drop_timer = 60
+    points = 0
     lines = 0
     level = 1
+    update = update_gameplay
 
     _ENV:set_current_piece()
+    lines_to_clear = {}
   end,
 
-  update = function(_ENV)
+  update_gameplay = function(_ENV)
     local cx = current_piece.x
     local cy = current_piece.y
+    lines_to_clear = {}
 
     drop_timer -= 1
 
@@ -27,12 +34,15 @@ game = scene:extend({
     elseif btnp(1) then
       cx += 1
     elseif btnp(2) then
-      while _ENV:is_valid_position(current_piece, cx, cy) do
+      while _ENV:is_valid_position(current_piece, cx, cy)
+      and cy <= #grid do
         cy += 1
       end
 
       current_piece.y = cy - 1
-    elseif btnp(4) then
+    end
+
+    if btnp(4) then
       if _ENV:rotate_current_piece(-1) then
         drop_timer = 60
       end
@@ -58,16 +68,19 @@ game = scene:extend({
       _ENV:set_current_piece()
     end
 
-    -- update preview
-    preview.x = current_piece.x
-    preview.y = current_piece.y
-    preview.data = current_piece.data
+    if preview then
+      -- update preview
+      preview.x = current_piece.x
+      preview.y = current_piece.y
+      preview.data = current_piece.data
 
-    while _ENV:is_valid_position(current_piece, preview.x, preview.y) do
-      preview.y += 1
+      while _ENV:is_valid_position(current_piece, preview.x, preview.y)
+      and preview.y <= #grid do
+        preview.y += 1
+      end
+
+      preview.y -= 1
     end
-
-    preview.y -= 1
   end,
 
   draw = function(_ENV)
@@ -117,9 +130,9 @@ game = scene:extend({
     spr(33, 51, 39, 2, 1)
     ? lpad(level), 51, 43, 7
 
-    -- draw high score
-    spr(51, 51, 52, 2, 1)
-    ? lpad(0), 51, 56, 7
+    -- draw points
+    spr(37, 51, 52, 2, 1)
+    ? lpad(points), 51, 56, 7
 
     entity:each("draw")
   end,
@@ -143,7 +156,7 @@ game = scene:extend({
       return true
     end
 
-    for offset in all({{-1, 0},{1, 0},{0, 1}}) do
+    for offset in all({{-1, 0},{-1, 0},{0, 1},{1, 0}}) do
       if _ENV:is_valid_position(current_piece, cx + offset[1], cy + offset[2]) then
         current_piece.x += offset[1]
         current_piece.y += offset[2]
@@ -156,7 +169,7 @@ game = scene:extend({
   end,
 
   is_valid_position = function(_ENV, test_piece, x, y)
-    local data = current_piece.data
+    local data = test_piece.data
 
     for dy = 1, #data do
       for dx = 1, #data[1] do
@@ -182,6 +195,8 @@ game = scene:extend({
     local px = grid_piece.x
     local data = grid_piece.data
 
+    points += 1
+
     for dy = 1, #data do
       for dx = 1, #data[1] do
         if data[dy][dx] == 1 then
@@ -202,7 +217,7 @@ game = scene:extend({
   end,
 
   evaluate_lines = function(_ENV)
-    -- if line count >= 10 increment level count
+    local line_count = 0
 
     -- remove completed lines
     for y = #grid, 1, -1 do
@@ -213,13 +228,19 @@ game = scene:extend({
       end
 
       if total == #grid[1] then
+        line_count += 1
         deli(grid, y)
-        lines += 1
       end
     end
 
+    -- backfill empty rows
     for i = 1, 16 - #grid do
       add(grid, {0,0,0,0,0,0,0,0,0}, 1)
+    end
+
+    -- increase points
+    if line_count > 0 then
+      points += line_points[min(4,line_count)]
     end
 
     if lines >= 10 then
@@ -227,7 +248,7 @@ game = scene:extend({
       -- todo: increase drop speed
       -- todo: high score
       level += 1
-      lines %= 10
+      lines = 0
     end
   end
 })
