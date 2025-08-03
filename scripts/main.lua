@@ -1,11 +1,12 @@
 poke(0x5f2e, 1)   -- enable alternate palette
+poke(0x5f5c, 255) -- disable key repeat
 poke(0x5f2c, 3)   -- set resolution to 64x64
 
 -- setup global references
 global = _ENV
 
 -- config
-entity.gravity = 0
+entity.gravity_scale = 0
 custom_transition_table = [[
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
   1,1,129,129,129,129,129,129,129,129,0,0,0,0,0
