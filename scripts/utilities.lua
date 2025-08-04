@@ -58,3 +58,15 @@ function font(txt,x,y,c)
 	?txt,x,y,c
 	poke(0x5f58,0x80)
 end
+
+function shuffle(t)
+  local n = #t
+
+  while n > 1 do
+    local k = 1 + flr(rnd(n))
+    t[n], t[k] = t[k], t[n]
+    n = n - 1
+  end
+
+  return t
+end

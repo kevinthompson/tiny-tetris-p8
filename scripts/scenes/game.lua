@@ -18,6 +18,9 @@ game = scene:extend({
     points = 0
     lines = 0
     level = 1
+    bg_height = 1
+    piece_index = 1
+    piece_bag = shuffle({1,2,3,4,5,6,7})
 
     -- load first piece
     _ENV:load_next_piece()
@@ -92,7 +95,7 @@ game = scene:extend({
       for x = 0, 64 do
         if x == 0 or x >= 48 or y > 56 then
           local py = (offset / 2) % step + y + sin((x + offset)/period) * amp
-          pset(x, py, 1)
+          line(x, py, x, py + bg_height - 1, 1)
         end
       end
     end
@@ -139,15 +142,17 @@ game = scene:extend({
   end,
 
   load_next_piece = function(_ENV)
-    local piece_id = next_piece or _ENV:get_random_piece_id()
-    current_piece = piece({ id = piece_id })
-    preview = piece({ id = piece_id, preview = true })
-    next_piece = _ENV:get_random_piece_id()
-    _ENV:reset_drop_timer()
-  end,
+    current_piece = piece({ id = piece_bag[piece_index] })
+    preview = piece({ id = current_piece.id, preview = true })
+    piece_index += 1
 
-  get_random_piece_id = function(_ENV)
-    return flr(rnd(#piece.dictionary)) + 1
+    if piece_index > #piece_bag then
+      piece_bag = shuffle({1,2,3,4,5,6,7})
+      piece_index = 1
+    end
+
+    next_piece = piece_bag[piece_index]
+    _ENV:reset_drop_timer()
   end,
 
   move_current_piece = function(_ENV, x, y)
@@ -351,7 +356,7 @@ game = scene:extend({
     -- todo: level change animation
 
     -- increase drop speed
-    max_drop_timer *= 0.9
+    max_drop_timer *= 0.8
 
     -- update high score
     if points > dget(0) then
