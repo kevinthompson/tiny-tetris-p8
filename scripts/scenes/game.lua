@@ -18,7 +18,6 @@ game = scene:extend({
     points = 0
     lines = 0
     level = 1
-    bg_height = 1
     piece_index = 1
     piece_bag = shuffle({1,2,3,4,5,6,7})
 
@@ -95,7 +94,7 @@ game = scene:extend({
       for x = 0, 64 do
         if x == 0 or x >= 48 or y > 56 then
           local py = (offset / 2) % step + y + sin((x + offset)/period) * amp
-          line(x, py, x, py + bg_height - 1, 1)
+          pset(x, py, 1)
         end
       end
     end
@@ -183,7 +182,7 @@ game = scene:extend({
     end
 
     -- attempt to move rotated piece to a valid position
-    for offset in all({{-1, 0},{1, 0},{0, -1},{0, 1}}) do
+    for offset in all({{0, 1},{0, -1},{-1, 0},{1, 0}}) do
       if _ENV:is_valid_position(cx + offset[1], cy + offset[2]) then
         current_piece.x += offset[1]
         current_piece.y += offset[2]

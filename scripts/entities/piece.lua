@@ -3,9 +3,10 @@ piece = entity:extend({
   y = 3,
   data = {},
   preview = false,
+  rotation_index = 1,
 
   after_init = function(_ENV)
-    data = dictionary[id]
+    data = dictionary[id][rotation_index]
     layer = preview and 1 or 2
   end,
 
@@ -21,62 +22,138 @@ piece = entity:extend({
   end,
 
   rotate = function(_ENV, dir)
-    local rows = #data
-    local cols = #data[1]
+    local rotations = #dictionary[id]
+    rotation_index = rotation_index + dir
 
-    local new_data = {}
-    for r = 1, rows do
-      new_data[r] = {}
-    end
+    if (rotation_index > rotations) rotation_index = 1
+    if (rotation_index < 1) rotation_index = rotations
 
-    for r = 1, rows do
-      for c = 1, cols do
-        if dir == 1 then
-          new_data[c][rows + 1 - r] = data[r][c]
-        else
-          new_data[cols + 1 - c][r] = data[r][c]
-        end
-      end
-    end
-
-    data = new_data
+    data = dictionary[id][rotation_index]
   end,
 
   dictionary = {
+    -- J piece
     {
-      {1, 0, 0 },
-      {1, 1, 1 },
-      {0, 0, 0 },
+      {
+        {1, 0, 0 },
+        {1, 1, 1 },
+        {0, 0, 0 },
+      },
+      {
+        {0, 1, 1 },
+        {0, 1, 0 },
+        {0, 1, 0 },
+      },
+      {
+        {0, 0, 0 },
+        {1, 1, 1 },
+        {0, 0, 1 },
+      },
+      {
+        {0, 1, 0 },
+        {0, 1, 0 },
+        {1, 1, 0 },
+      },
     },
+
+    -- L piece
     {
-      {0, 0, 1 },
-      {1, 1, 1 },
-      {0, 0, 0 },
+      {
+        {0, 0, 1 },
+        {1, 1, 1 },
+        {0, 0, 0 },
+      },
+      {
+        {0, 1, 0 },
+        {0, 1, 0 },
+        {0, 1, 1 },
+      },
+      {
+        {0, 0, 0 },
+        {1, 1, 1 },
+        {1, 0, 0 },
+      },
+      {
+        {1, 1, 0 },
+        {0, 1, 0 },
+        {0, 1, 0 },
+      },
     },
+
+    -- I piece
     {
-      { 0, 0, 0, 0 },
-      { 1, 1, 1, 1 },
-      { 0, 0, 0, 0 },
-      { 0, 0, 0, 0 },
+      {
+        { 0, 0, 0, 0 },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+      },
+      {
+        { 0, 0, 1, 0 },
+        { 0, 0, 1, 0 },
+        { 0, 0, 1, 0 },
+        { 0, 0, 1, 0 },
+      }
     },
+
+    -- Z piece
     {
-      { 1, 1, 0 },
-      { 0, 1, 1 },
-      { 0, 0, 0 },
+      {
+        { 1, 1, 0 },
+        { 0, 1, 1 },
+        { 0, 0, 0 },
+      },
+      {
+        { 0, 0, 1 },
+        { 0, 1, 1 },
+        { 0, 1, 0 },
+      },
     },
+
+    -- O piece
     {
-      { 1, 1 },
-      { 1, 1 },
+      {
+        { 1, 1 },
+        { 1, 1 },
+      }
     },
+
+    -- T piece
     {
-      { 0, 1, 0 },
-      { 1, 1, 1 },
-      { 0, 0, 0 },
+      {
+        { 0, 1, 0 },
+        { 1, 1, 1 },
+        { 0, 0, 0 },
+      },
+      {
+        { 0, 1, 0 },
+        { 0, 1, 1 },
+        { 0, 1, 0 },
+      },
+      {
+        { 0, 0, 0 },
+        { 1, 1, 1 },
+        { 0, 1, 0 },
+      },
+      {
+        { 0, 1, 0 },
+        { 1, 1, 0 },
+        { 0, 1, 0 },
+      },
     },
+
+    -- S piece
     {
-      { 0, 1, 1 },
-      { 1, 1, 0 },
-      { 0, 0, 0 },
+      {
+        { 0, 1, 1 },
+        { 1, 1, 0 },
+        { 0, 0, 0 },
+      },
+      {
+        { 0, 1, 0 },
+        { 0, 1, 1 },
+        { 0, 0, 1 },
+      }
     }
   }
 })
