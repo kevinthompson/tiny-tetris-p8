@@ -14,10 +14,14 @@ game = scene:extend({
     end
 
     -- initial game state
+    max_time_resets = 15
     max_drop_timer = 60
+    time_resets = max_time_resets
+
     points = 0
     lines = 0
     level = 1
+
     piece_index = 1
     piece_bag = shuffle({1,2,3,4,5,6,7})
 
@@ -49,15 +53,16 @@ game = scene:extend({
     -- move left
     elseif btnp(0) then
       cx -= 1
+      _ENV:reset_drop_timer()
 
     -- move right
     elseif btnp(1) then
       cx += 1
+      _ENV:reset_drop_timer()
 
     -- quick drop
     elseif btnp(2) then
-      while _ENV:is_valid_position(cx, cy)
-      and cy <= #grid do
+      while _ENV:is_valid_position(cx, cy) do
         cy += 1
       end
 
@@ -155,6 +160,8 @@ game = scene:extend({
   end,
 
   move_current_piece = function(_ENV, x, y)
+    if (current_piece.y != y) time_resets = max_time_resets
+
     current_piece.x = x
     current_piece.y = y
 
@@ -237,6 +244,8 @@ game = scene:extend({
         end
       end
     end
+
+    sfx(0)
 
     -- destroy current piece entities
     current_piece:destroy()
@@ -367,6 +376,8 @@ game = scene:extend({
   end,
 
   reset_drop_timer = function(_ENV)
+    if (time_resets <= 0) return
+    time_resets -= 1
     drop_timer = max_drop_timer
   end,
 

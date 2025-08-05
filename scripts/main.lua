@@ -28,7 +28,7 @@ custom_transition_table = [[
 
 -- initialize cartridge
 function _init()
-  scene:load(game)
+  scene:load(splash)
 end
 
 -- update current scene
