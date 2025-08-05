@@ -54,13 +54,11 @@ game = scene:extend({
     -- move left
     elseif btnp(0) then
       sfx(2)
-      _ENV:reset_drop_timer()
       cx -= 1
 
     -- move right
     elseif btnp(1) then
       sfx(2)
-      _ENV:reset_drop_timer()
       cx += 1
 
     -- quick drop
@@ -161,6 +159,7 @@ game = scene:extend({
   end,
 
   move_current_piece = function(_ENV, x, y)
+    if (current_piece.x != x) _ENV:reset_drop_timer()
     if (current_piece.y != y) _ENV:reset_timers()
 
     current_piece.x = x
