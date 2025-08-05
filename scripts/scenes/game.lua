@@ -14,9 +14,8 @@ game = scene:extend({
     end
 
     -- initial game state
-    max_time_resets = 15
     max_drop_timer = 60
-    time_resets = max_time_resets
+    timer_resets = 0
 
     points = 0
     lines = 0
@@ -40,38 +39,40 @@ game = scene:extend({
 
     -- rotate counter-clockwise
     if btnp(4) then
+      sfx(1)
       if _ENV:rotate_current_piece(-1) then
         _ENV:reset_drop_timer()
       end
 
     -- rotate clockwise
     elseif btnp(5) then
+      sfx(1)
       if _ENV:rotate_current_piece(1) then
         _ENV:reset_drop_timer()
       end
 
     -- move left
     elseif btnp(0) then
-      cx -= 1
+      sfx(2)
       _ENV:reset_drop_timer()
+      cx -= 1
 
     -- move right
     elseif btnp(1) then
-      cx += 1
+      sfx(2)
       _ENV:reset_drop_timer()
+      cx += 1
 
     -- quick drop
     elseif btnp(2) then
       while _ENV:is_valid_position(cx, cy) do
+        current_piece.y = cy
         cy += 1
       end
-
-      current_piece.y = cy - 1
 
     -- move down
     elseif drop_timer <= 0 or btnp(3) then
       cy += 1
-      _ENV:reset_drop_timer()
     end
 
     -- apply movement if valid
@@ -156,11 +157,11 @@ game = scene:extend({
     end
 
     next_piece = piece_bag[piece_index]
-    _ENV:reset_drop_timer()
+    _ENV:reset_timers()
   end,
 
   move_current_piece = function(_ENV, x, y)
-    if (current_piece.y != y) time_resets = max_time_resets
+    if (current_piece.y != y) _ENV:reset_timers()
 
     current_piece.x = x
     current_piece.y = y
@@ -375,10 +376,18 @@ game = scene:extend({
     lines = 0
   end,
 
-  reset_drop_timer = function(_ENV)
-    if (time_resets <= 0) return
-    time_resets -= 1
-    drop_timer = max_drop_timer
+  reset_timers = function(_ENV)
+    _ENV:reset_drop_timer(true)
+    timer_resets = 0
+  end,
+
+  reset_drop_timer = function(_ENV, force)
+    local valid_drop = _ENV:is_valid_position(current_piece.x, current_piece.y + 1)
+
+    if force or (not valid_drop and timer_resets < 15) then
+      timer_resets += 1
+      drop_timer = max_drop_timer
+    end
   end,
 
   handle_game_over = function(_ENV)
