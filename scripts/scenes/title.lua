@@ -17,6 +17,7 @@ title = scene:extend({
 
   update = function(_ENV)
     if not loading and btnp(5) then
+      sfx(5)
       transition(function()
         entity:each("destroy")
         scene:load(game)

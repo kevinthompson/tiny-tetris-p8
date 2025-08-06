@@ -2,6 +2,7 @@ game = scene:extend({
   init = function(_ENV)
     -- define line clear points
     line_clear_points = {1, 3, 6, 10}
+    line_clear_sfx = {6, 7, 8, 9}
 
     -- create empty grid
     grid = {}
@@ -22,77 +23,92 @@ game = scene:extend({
     piece_bag = shuffle({1,2,3,4,5,6,7})
 
     -- load first piece
+    async(function()
+      wait(30)
+      music(0)
+    end)
+
     _ENV:load_next_piece()
   end,
 
   update = function(_ENV)
-    if (not current_piece) return
+    if current_piece then
+      drop_timer += 1
 
-    drop_timer += 1
+      -- rotate counter-clockwise
+      if btnp(4) then
+        sfx(1)
+        if _ENV:rotate_current_piece(-1) then
+          _ENV:reset_drop_timer()
+        end
 
-    -- rotate counter-clockwise
-    if btnp(4) then
-      sfx(1)
-      if _ENV:rotate_current_piece(-1) then
-        _ENV:reset_drop_timer()
-      end
+      -- rotate clockwise
+      elseif btnp(5) then
+        sfx(1)
+        if _ENV:rotate_current_piece(1) then
+          _ENV:reset_drop_timer()
+        end
 
-    -- rotate clockwise
-    elseif btnp(5) then
-      sfx(1)
-      if _ENV:rotate_current_piece(1) then
-        _ENV:reset_drop_timer()
-      end
+      -- handle movement
+      else
+        local cx = current_piece.x
+        local cy = current_piece.y
 
-    -- handle movement
-    else
-      local cx = current_piece.x
-      local cy = current_piece.y
+        -- move left
+        if btnp(0) then
+          sfx(2)
+          cx -= 1
 
-      -- move left
-      if btnp(0) then
-        sfx(2)
-        cx -= 1
+        -- move right
+        elseif btnp(1) then
+          sfx(2)
+          cx += 1
 
-      -- move right
-      elseif btnp(1) then
-        sfx(2)
-        cx += 1
+        -- quick drop
+        elseif btnp(2) then
+          sfx(10)
 
-      -- quick drop
-      elseif btnp(2) then
-        while _ENV:valid_position(cx, cy) do
-          current_piece.y = cy
+          while _ENV:valid_position(cx, cy) do
+            current_piece.y = cy
+            cy += 1
+          end
+
+        -- move down
+        elseif btnp(3) then
+          cy += 1
+          sfx(2)
+        elseif drop_timer >= max_drop_timer then
           cy += 1
         end
 
-      -- move down
-      elseif drop_timer >= max_drop_timer or btnp(3) then
-        cy += 1
-      end
+        -- apply movement if valid
+        if _ENV:valid_position(cx, cy) then
+          _ENV:move_current_piece(cx, cy)
 
-      -- apply movement if valid
-      if _ENV:valid_position(cx, cy) then
-        _ENV:move_current_piece(cx, cy)
-
-      -- handle invalid drop
-      elseif cy > current_piece.y then
-        _ENV:add_current_piece_to_grid()
-        _ENV:clear_completed_lines(function()
-          -- check for invalid lines
-          for y = 1, 6 do
-            for x = 1, #grid[1] do
-              if grid[y][x] != 0 then
-                scene:load(game_over)
-                return
+        -- handle invalid drop
+        elseif cy > current_piece.y then
+          _ENV:add_current_piece_to_grid()
+          _ENV:clear_completed_lines(function()
+            -- check for invalid lines
+            for y = 1, 6 do
+              for x = 1, #grid[1] do
+                if grid[y][x] != 0 then
+                  scene:load(game_over)
+                  return
+                end
               end
             end
-          end
 
-          -- load next piece
-          _ENV:load_next_piece()
-        end)
+            -- load next piece
+            _ENV:load_next_piece()
+          end)
+        end
       end
+    end
+
+    -- update high score
+    if points > dget(0) then
+      dset(0, points)
     end
   end,
 
@@ -151,7 +167,7 @@ game = scene:extend({
 
     -- draw points
     spr(37, 51, 52, 2, 1)
-    ? lpad(points), 51, 56, 7
+    ? lpad(points), 51, 56, points >= dget(0) and 10 or 7
 
     -- flash if about the be placed
     if current_piece then
@@ -308,7 +324,9 @@ game = scene:extend({
 
     -- increase points
     if #line_indexes > 0 then
-      points += line_clear_points[min(4,#line_indexes)]
+      local index = min(4,#line_indexes)
+      points += line_clear_points[index]
+      sfx(line_clear_sfx[index])
     end
 
     -- increase line count
@@ -327,11 +345,6 @@ game = scene:extend({
 
     -- increase drop speed
     max_drop_timer *= 0.8
-
-    -- update high score
-    if points > dget(0) then
-      dset(0, points)
-    end
 
     level += 1
     lines = 0
