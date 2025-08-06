@@ -70,7 +70,7 @@ game = scene:extend({
 
         -- quick drop
         elseif btnp(2) then
-          sfx(10)
+          -- sfx(10)
 
           while _ENV:valid_position(cx, cy) do
             current_piece.y = cy
@@ -353,7 +353,7 @@ game = scene:extend({
     max_drop_timer *= 0.8
 
     -- increase music speed
-    _ENV:set_music_speed(16 - (level - 1) / 2)
+    _ENV:set_music_speed(16 - (level - 1))
   end,
 
   set_music_speed = function(_ENV, speed)
