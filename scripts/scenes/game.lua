@@ -1,6 +1,12 @@
 game = scene:extend({
   init = function(_ENV)
-    -- define line clear points
+    -- config
+    entry_delay_frames = 6
+    max_drop_timer = 60
+    min_music_speed = 8
+    max_music_speed = 14
+    max_lock_timer = 30
+    max_timer_resets = 15
     line_clear_points = {1, 3, 6, 10}
     line_clear_sfx = {6, 7, 8, 9}
 
@@ -11,22 +17,17 @@ game = scene:extend({
     end
 
     -- initial game state
-    max_music_speed = 16
-    min_music_speed = 8
-    line_offset = 0
-    max_drop_timer = 60
-    max_timer_resets = 15
     points = 0
-    lines = 0
     level = 1
-
-    _ENV:set_music_speed(max_music_speed)
+    lines = 0
+    line_offset = 0
+    lock_timer = 0
 
     -- setup piece bag
     piece_index = 1
     piece_bag = shuffle({1,2,3,4,5,6,7})
 
-    -- load first piece
+    -- start music
     async(function()
       wait(30)
       music(0)
@@ -36,22 +37,25 @@ game = scene:extend({
   end,
 
   update = function(_ENV)
+    -- set music speed
+    local range = max_music_speed - min_music_speed
+    local mult = min((level - 1) / 10, 1)
+    local new_speed = max_music_speed - mult * range
+
+    for sfx = 11, 19 do
+      poke(0x3200 + 68 * sfx + 65, new_speed)
+    end
+
     if current_piece then
       drop_timer += 1
 
       -- rotate counter-clockwise
       if btnp(4) then
-        sfx(1)
-        if _ENV:rotate_current_piece(-1) then
-          _ENV:reset_drop_timer()
-        end
+        _ENV:rotate_current_piece(-1)
 
       -- rotate clockwise
       elseif btnp(5) then
-        sfx(1)
-        if _ENV:rotate_current_piece(1) then
-          _ENV:reset_drop_timer()
-        end
+        _ENV:rotate_current_piece(1)
 
       -- handle movement
       else
@@ -61,54 +65,49 @@ game = scene:extend({
         -- move left
         if btnp(0) then
           sfx(2)
-          cx -= 1
+          _ENV:move_current_piece(cx - 1, cy)
 
         -- move right
         elseif btnp(1) then
           sfx(2)
-          cx += 1
+          _ENV:move_current_piece(cx + 1, cy)
 
         -- quick drop
         elseif btnp(2) then
-          -- sfx(10)
-
           while _ENV:valid_position(cx, cy) do
             current_piece.y = cy
             cy += 1
           end
 
-        -- move down
-        elseif btnp(3) then
-          cy += 1
-          sfx(2)
-        elseif drop_timer >= max_drop_timer then
-          cy += 1
-        end
-
-        -- apply movement if valid
-        if _ENV:valid_position(cx, cy) then
-          _ENV:move_current_piece(cx, cy)
-
-        -- handle invalid drop
-        elseif cy > current_piece.y then
           _ENV:lock_current_piece()
-          _ENV:clear_completed_lines(function()
-            -- check for invalid lines
-            for y = 1, 6 do
-              for x = 1, #grid[1] do
-                if grid[y][x] != 0 then
-                  scene:load(game_over)
-                  return
-                end
-              end
-            end
 
-            wait(6)
+        -- move down
+        elseif _ENV:valid_position(cx, cy + 1) then
+          if btnp(3) or drop_timer >= max_drop_timer then
+            if (btnp(3)) sfx(2)
+            _ENV:move_current_piece(cx, cy + 1)
+          end
 
-            -- load next piece
-            _ENV:load_next_piece()
-          end)
+        -- piece in lock position
+        else
+          if lock_timer < max_lock_timer then
+            lock_timer += 1
+          else
+            _ENV:lock_current_piece()
+          end
         end
+      end
+    end
+
+    -- update preview
+    if current_piece and preview then
+      preview.x = current_piece.x
+      preview.y = current_piece.y
+      preview.data = current_piece.data
+
+      -- move preview down until it's not valid
+      while _ENV:valid_position(preview.x, preview.y + 1) do
+        preview.y += 1
       end
     end
 
@@ -183,61 +182,63 @@ game = scene:extend({
     entity:each("draw")
   end,
 
+  reset_timer = function(_ENV)
+    if timer_resets < max_timer_resets then
+      timer_resets += 1
+      lock_timer = 0
+    end
+  end,
+
   load_next_piece = function(_ENV)
+    -- get the next piece from the bag
     current_piece = piece({ id = piece_bag[piece_index] })
     preview = piece({ id = current_piece.id, preview = true })
     piece_index += 1
 
+    -- reset the bag once empty
     if piece_index > #piece_bag then
       piece_bag = shuffle({1,2,3,4,5,6,7})
       piece_index = 1
     end
 
+    -- queue the next piece
     next_piece = piece_bag[piece_index]
     max_y = current_piece.y
+
+    -- reset timer variables
     drop_timer = 0
+    lock_timer = 0
     timer_resets = 0
   end,
 
   move_current_piece = function(_ENV, x, y)
-    if (current_piece.x != x) _ENV:reset_drop_timer()
-    if (current_piece.y != y) drop_timer = 0
+    if _ENV:valid_position(x, y) then
+      if (current_piece.x != x) _ENV:reset_timer()
 
-    -- only reset timer limit on new row
-    if y > max_y then
-      max_y = y
-      timer_resets = 0
+      -- only reset timer limit on new row
+      if y > max_y then
+        max_y = y
+        lock_timer = 0
+        drop_timer = 0
+        timer_resets = 0
+      end
+
+      -- update current piece position
+      current_piece.x = x
+      current_piece.y = y
     end
-
-    -- update current piece position
-    current_piece.x = x
-    current_piece.y = y
-
-    -- update preview
-    preview.x = x
-    preview.y = y
-    preview.data = current_piece.data
-
-    -- move preview down until it's not valid
-    while _ENV:valid_position(preview.x, preview.y)
-    and preview.y <= #grid do
-      preview.y += 1
-    end
-
-    preview.y -= 1
   end,
 
   rotate_current_piece = function(_ENV, dir)
     local cx, cy = current_piece.x, current_piece.y
-    current_piece:rotate(dir)
+    local valid_rotation = false
 
-    -- return if rotation is valid
-    if _ENV:valid_position(cx, cy) then
-      return true
-    end
+    sfx(1)
+    current_piece:rotate(dir)
 
     -- attempt to move rotated piece to a valid position
     local potential_moves = {
+      {0, 0},
       {0, -1},
       {0, -2},
       {-1, -1},
@@ -252,13 +253,17 @@ game = scene:extend({
       if _ENV:valid_position(cx + offset[1], cy + offset[2]) then
         current_piece.x += offset[1]
         current_piece.y += offset[2]
-        return true
+        valid_rotation = true
+        break
       end
     end
 
-    -- undo rotation
-    current_piece:rotate(dir * -1)
-    return false
+    if valid_rotation then
+      _ENV:reset_timer()
+    else
+      -- undo rotation
+      current_piece:rotate(dir * -1)
+    end
   end,
 
   valid_position = function(_ENV, x, y)
@@ -311,9 +316,27 @@ game = scene:extend({
     current_piece = nil
     preview:destroy()
     preview = nil
+
+    _ENV:clear_completed_lines(function()
+      -- check for invalid lines
+      for y = 1, 6 do
+        for x = 1, #grid[1] do
+          if grid[y][x] != 0 then
+            scene:load(game_over)
+            return
+          end
+        end
+      end
+
+      wait(entry_delay_frames)
+
+      -- load next piece
+      _ENV:load_next_piece()
+    end)
   end,
 
   clear_completed_lines = function(_ENV, callback)
+    -- find line indexes to clear
     local line_indexes = {}
 
     for y = #grid, 1, -1 do
@@ -338,42 +361,13 @@ game = scene:extend({
     -- increase line count
     lines += #line_indexes
 
-    -- load next level
-    if lines >= 10 then
-      _ENV:load_next_level()
-    end
-
-    _ENV:animate_line_clear(line_indexes, callback)
-  end,
-
-  load_next_level = function(_ENV)
-    -- todo: level change animation
-    level += 1
-    lines = 0
+    -- increase level
+    level = 1 + lines \ 10
 
     -- increase drop speed
-    max_drop_timer *= 0.8
+    max_drop_timer = 60 * (0.8 - ((level - 1) * 0.007))^(level-1)
 
-    -- increase music speed
-    _ENV:set_music_speed(16 - (level - 1))
-  end,
-
-  set_music_speed = function(_ENV, speed)
-    for sfx = 11, 19 do
-      poke(0x3200 + 68 * sfx + 65, mid(min_music_speed, speed, max_music_speed))
-    end
-  end,
-
-  reset_drop_timer = function(_ENV)
-    local valid_drop = _ENV:valid_position(current_piece.x, current_piece.y + 1)
-
-    if not valid_drop and timer_resets < max_timer_resets then
-      timer_resets += 1
-      drop_timer = 0
-    end
-  end,
-
-  animate_line_clear = function(_ENV, line_indexes, callback)
+    -- clear lines
     async(function()
       -- iterate over each line
       for x = 1, #grid[1] do
@@ -432,5 +426,5 @@ game = scene:extend({
       -- call callback when complete
       callback()
     end)
-  end
+  end,
 })

@@ -13,7 +13,7 @@ piece = entity:extend({
   draw = function(_ENV)
     local sprite = preview and 8 or id
 
-    if not preview and flashing and flr(t() * 10) % 4 == 0 then
+    if not preview and flashing and flr(t() * 10) % 2 == 0 then
       sprite += 32
     end
 
