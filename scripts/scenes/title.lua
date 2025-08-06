@@ -4,7 +4,9 @@ title = scene:extend({
 
   update = function(_ENV)
     if not loading and btnp(5) then
-      scene:load(game)
+      -- transition(function()
+        scene:load(game)
+      -- end)
     end
   end,
 

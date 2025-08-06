@@ -11,6 +11,8 @@ piece = entity:extend({
   end,
 
   draw = function(_ENV)
+    if (flashing and flr(t() * 100) % 4 == 0) return
+
     for dy = 1, #data do
       local sy = -18 + (y + dy - 2) * 5
 

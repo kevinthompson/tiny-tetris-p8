@@ -1,26 +1,23 @@
 game = scene:extend({
   init = function(_ENV)
-    -- set palette
-    pal(split("1,129,139,140,5,6,7,8,9,10,11,12,13,14,15,0"), 1)
-
     -- define line clear points
-    line_points = {1,3,6,10}
+    line_clear_points = {1, 3, 6, 10}
 
     -- create empty grid
-    grid_offset = 0
     grid = {}
     for y = 1, 16 do
       add(grid, {0,0,0,0,0,0,0,0,0})
     end
 
     -- initial game state
+    line_offset = 0
     max_drop_timer = 60
-    timer_resets = 0
-
+    max_timer_resets = 15
     points = 0
     lines = 0
     level = 1
 
+    -- setup piece bag
     piece_index = 1
     piece_bag = shuffle({1,2,3,4,5,6,7})
 
@@ -31,11 +28,7 @@ game = scene:extend({
   update = function(_ENV)
     if (not current_piece) return
 
-    local cx = current_piece.x
-    local cy = current_piece.y
-
-    completed_line_indexes = {}
-    drop_timer -= 1
+    drop_timer += 1
 
     -- rotate counter-clockwise
     if btnp(4) then
@@ -51,36 +44,55 @@ game = scene:extend({
         _ENV:reset_drop_timer()
       end
 
-    -- move left
-    elseif btnp(0) then
-      sfx(2)
-      cx -= 1
+    -- handle movement
+    else
+      local cx = current_piece.x
+      local cy = current_piece.y
 
-    -- move right
-    elseif btnp(1) then
-      sfx(2)
-      cx += 1
+      -- move left
+      if btnp(0) then
+        sfx(2)
+        cx -= 1
 
-    -- quick drop
-    elseif btnp(2) then
-      while _ENV:is_valid_position(cx, cy) do
-        current_piece.y = cy
+      -- move right
+      elseif btnp(1) then
+        sfx(2)
+        cx += 1
+
+      -- quick drop
+      elseif btnp(2) then
+        while _ENV:valid_position(cx, cy) do
+          current_piece.y = cy
+          cy += 1
+        end
+
+      -- move down
+      elseif drop_timer >= max_drop_timer or btnp(3) then
         cy += 1
       end
 
-    -- move down
-    elseif drop_timer <= 0 or btnp(3) then
-      cy += 1
-    end
+      -- apply movement if valid
+      if _ENV:valid_position(cx, cy) then
+        _ENV:move_current_piece(cx, cy)
 
-    -- apply movement if valid
-    if _ENV:is_valid_position(cx, cy) then
-      _ENV:move_current_piece(cx, cy)
+      -- handle invalid drop
+      elseif cy > current_piece.y then
+        _ENV:add_current_piece_to_grid()
+        _ENV:clear_completed_lines(function()
+          -- check for invalid lines
+          for y = 1, 4 do
+            for x = 1, #grid[1] do
+              if grid[y][x] != 0 then
+                scene:load(game_over)
+                return
+              end
+            end
+          end
 
-    -- add piece to grid
-    elseif cy > current_piece.y then
-      _ENV:add_current_piece_to_grid()
-      _ENV:evaluate_lines()
+          -- load next piece
+          _ENV:load_next_piece()
+        end)
+      end
     end
   end,
 
@@ -113,8 +125,8 @@ game = scene:extend({
     for iy, row in ipairs(grid) do
       local row_offset = 0
 
-      for i in all(completed_line_indexes) do
-        if (i > iy) row_offset += grid_offset
+      for i in all(line_indexes) do
+        if (i > iy) row_offset += line_offset
       end
 
       local y = -18 + (iy - 1) * 5 + row_offset
@@ -141,6 +153,11 @@ game = scene:extend({
     spr(37, 51, 52, 2, 1)
     ? lpad(points), 51, 56, 7
 
+    -- flash if about the be placed
+    if current_piece then
+      current_piece.flashing = not _ENV:valid_position(current_piece.x, current_piece.y + 1)
+    end
+
     entity:each("draw")
   end,
 
@@ -155,13 +172,22 @@ game = scene:extend({
     end
 
     next_piece = piece_bag[piece_index]
-    _ENV:reset_timers()
+    max_y = current_piece.y
+    drop_timer = 0
+    timer_resets = 0
   end,
 
   move_current_piece = function(_ENV, x, y)
     if (current_piece.x != x) _ENV:reset_drop_timer()
-    if (current_piece.y != y) _ENV:reset_timers()
+    if (current_piece.y != y) drop_timer = 0
 
+    -- only reset timer limit on new row
+    if y > max_y then
+      max_y = y
+      timer_resets = 0
+    end
+
+    -- update current piece position
     current_piece.x = x
     current_piece.y = y
 
@@ -171,7 +197,7 @@ game = scene:extend({
     preview.data = current_piece.data
 
     -- move preview down until it's not valid
-    while _ENV:is_valid_position(preview.x, preview.y)
+    while _ENV:valid_position(preview.x, preview.y)
     and preview.y <= #grid do
       preview.y += 1
     end
@@ -184,13 +210,13 @@ game = scene:extend({
     current_piece:rotate(dir)
 
     -- return if rotation is valid
-    if _ENV:is_valid_position(cx, cy) then
+    if _ENV:valid_position(cx, cy) then
       return true
     end
 
     -- attempt to move rotated piece to a valid position
-    for offset in all({{0, 1},{0, -1},{-1, 0},{1, 0}}) do
-      if _ENV:is_valid_position(cx + offset[1], cy + offset[2]) then
+    for offset in all({{0, -1},{0, -2},{-1, 0},{1, 0},{-2, 0},{2, 0}}) do
+      if _ENV:valid_position(cx + offset[1], cy + offset[2]) then
         current_piece.x += offset[1]
         current_piece.y += offset[2]
         return true
@@ -202,7 +228,7 @@ game = scene:extend({
     return false
   end,
 
-  is_valid_position = function(_ENV, x, y)
+  valid_position = function(_ENV, x, y)
     local data = current_piece.data
 
     for dy = 1, #data do
@@ -254,97 +280,9 @@ game = scene:extend({
     preview = nil
   end,
 
-  evaluate_lines = function(_ENV)
-    completed_line_indexes = _ENV:find_completed_lines()
+  clear_completed_lines = function(_ENV, callback)
+    local line_indexes = {}
 
-    -- increase points
-    if #completed_line_indexes > 0 then
-      points += line_points[min(4,#completed_line_indexes)]
-    end
-
-    -- increase line count
-    lines += #completed_line_indexes
-
-    -- load next level
-    if lines >= 10 then
-      _ENV:load_next_level()
-    end
-
-    -- remove cleared lines asynchronously
-    async(function()
-      -- iterate over each line
-      for x = 1, #grid[1] do
-        for y in all(completed_line_indexes) do
-          for i = 1, 3 do
-
-            -- spawn particles
-            particle({
-              x = 3 + x * 5,
-              y = -18 + y * 5,
-              frames = 30,
-              gravity_scale = 1,
-              radius = {2, 0},
-              color = {10,7},
-              vy = -1.5,
-              vx = -1 + rnd(2)
-            })
-          end
-
-          -- change line color
-          grid[y][x] = 9
-        end
-
-        yield()
-      end
-
-      -- make lines black
-      for x = 1, #grid[1] do
-        for y in all(completed_line_indexes) do
-          grid[y][x] = 0
-        end
-      end
-
-      -- animate lines falling
-      if #completed_line_indexes > 0 then
-        local frames = 5
-        for i = 1, frames do
-          grid_offset = lerp(0, 5, ease_in(i/frames))
-          yield()
-        end
-      end
-
-      -- remove empty lines
-      for y in all(completed_line_indexes) do
-        deli(grid, y)
-      end
-
-      -- fill grid with empty rows
-      while #grid < 16 do
-        add(grid, {0,0,0,0,0,0,0,0,0}, 1)
-      end
-
-      -- reset visual offset
-      grid_offset = 0
-
-      -- check for invalid lines
-      for y = 1, 4 do
-        for x = 1, #grid[1] do
-          if grid[y][x] != 0 then
-            _ENV:handle_game_over()
-            return
-          end
-        end
-      end
-
-      -- load next piece
-      _ENV:load_next_piece()
-    end)
-  end,
-
-  find_completed_lines = function(_ENV)
-    local result = {}
-
-    -- remove completed lines
     for y = #grid, 1, -1 do
       local total = 0
 
@@ -353,11 +291,24 @@ game = scene:extend({
       end
 
       if total == #grid[1] then
-        add(result, y)
+        add(line_indexes, y)
       end
     end
 
-    return result
+    -- increase points
+    if #line_indexes > 0 then
+      points += line_clear_points[min(4,#line_indexes)]
+    end
+
+    -- increase line count
+    lines += #line_indexes
+
+    -- load next level
+    if lines >= 10 then
+      _ENV:load_next_level()
+    end
+
+    _ENV:animate_line_clear(line_indexes, callback)
   end,
 
   load_next_level = function(_ENV)
@@ -375,22 +326,73 @@ game = scene:extend({
     lines = 0
   end,
 
-  reset_timers = function(_ENV)
-    _ENV:reset_drop_timer(true)
-    timer_resets = 0
-  end,
+  reset_drop_timer = function(_ENV)
+    local valid_drop = _ENV:valid_position(current_piece.x, current_piece.y + 1)
 
-  reset_drop_timer = function(_ENV, force)
-    local valid_drop = _ENV:is_valid_position(current_piece.x, current_piece.y + 1)
-
-    if force or (not valid_drop and timer_resets < 15) then
+    if not valid_drop and timer_resets < max_timer_resets then
       timer_resets += 1
-      drop_timer = max_drop_timer
+      drop_timer = 0
     end
   end,
 
-  handle_game_over = function(_ENV)
-    -- todo: game over
-    extcmd("reset")
+  animate_line_clear = function(_ENV, line_indexes, callback)
+    async(function()
+      -- iterate over each line
+      for x = 1, #grid[1] do
+        for y in all(line_indexes) do
+          for i = 1, 3 do
+
+            -- spawn particles
+            particle({
+              x = 1 + x * 5,
+              y = -20 + y * 5,
+              frames = 25 + rnd(10),
+              gravity_scale = -0.25,
+              radius = {2, 0},
+              color = {10,7},
+              vy = 0,
+              vx = -0.5 + rnd()
+            })
+          end
+
+          -- change line color
+          grid[y][x] = 9
+        end
+
+        yield()
+      end
+
+      -- make lines black
+      for x = 1, #grid[1] do
+        for y in all(line_indexes) do
+          grid[y][x] = 0
+        end
+      end
+
+      -- animate lines falling
+      if #line_indexes > 0 then
+        local frames = 5
+        for i = 1, frames do
+          line_offset = lerp(0, 5, ease_in(i/frames))
+          yield()
+        end
+      end
+
+      -- remove empty lines
+      for y in all(line_indexes) do
+        deli(grid, y)
+      end
+
+      -- fill grid with empty rows
+      while #grid < 16 do
+        add(grid, {0,0,0,0,0,0,0,0,0}, 1)
+      end
+
+      -- reset visual offset
+      line_offset = 0
+
+      -- call callback when complete
+      callback()
+    end)
   end
 })
