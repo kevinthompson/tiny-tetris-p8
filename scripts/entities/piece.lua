@@ -14,7 +14,7 @@ piece = entity:extend({
     local sprite = preview and 8 or id
 
     if not preview and flashing and flr(t() * 10) % 4 == 0 then
-      sprite = 8
+      sprite += 32
     end
 
     for dy = 1, #data do

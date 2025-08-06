@@ -91,7 +91,7 @@ game = scene:extend({
 
         -- handle invalid drop
         elseif cy > current_piece.y then
-          _ENV:add_current_piece_to_grid()
+          _ENV:lock_current_piece()
           _ENV:clear_completed_lines(function()
             -- check for invalid lines
             for y = 1, 6 do
@@ -160,19 +160,19 @@ game = scene:extend({
     end
 
     -- draw next piece
-    spr(49, 51, 2, 2, 1)
+    spr(58, 51, 2, 2, 1)
     spr(next_piece + 16, 51, 6)
 
     -- draw line count
-    spr(35, 51, 26, 2, 1)
+    spr(44, 51, 26, 2, 1)
     ? lpad(lines), 51, 30, 7
 
     -- draw level number
-    spr(33, 51, 39, 2, 1)
+    spr(42, 51, 39, 2, 1)
     ? lpad(level), 51, 43, 7
 
     -- draw points
-    spr(37, 51, 52, 2, 1)
+    spr(46, 51, 52, 2, 1)
     ? lpad(points), 51, 56, points >= dget(0) and 10 or 7
 
     -- flash if about the be placed
@@ -283,7 +283,7 @@ game = scene:extend({
     return true
   end,
 
-  add_current_piece_to_grid = function(_ENV)
+  lock_current_piece = function(_ENV)
     local cy = current_piece.y
     local cx = current_piece.x
     local data = current_piece.data
