@@ -1,6 +1,6 @@
 piece = entity:extend({
   x = 4,
-  y = 3,
+  y = 5,
   data = {},
   preview = false,
   rotation_index = 1,
@@ -14,7 +14,7 @@ piece = entity:extend({
     if (flashing and flr(t() * 100) % 4 == 0) return
 
     for dy = 1, #data do
-      local sy = -18 + (y + dy - 2) * 5
+      local sy = -28 + (y + dy - 2) * 5
 
       for dx = 1, #data[1] do
         local sx = 3 + (x + dx - 2) * 5

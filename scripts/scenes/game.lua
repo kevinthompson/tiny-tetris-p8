@@ -5,7 +5,7 @@ game = scene:extend({
 
     -- create empty grid
     grid = {}
-    for y = 1, 16 do
+    for y = 1, 18 do
       add(grid, {0,0,0,0,0,0,0,0,0})
     end
 
@@ -80,7 +80,7 @@ game = scene:extend({
         _ENV:add_current_piece_to_grid()
         _ENV:clear_completed_lines(function()
           -- check for invalid lines
-          for y = 1, 4 do
+          for y = 1, 6 do
             for x = 1, #grid[1] do
               if grid[y][x] != 0 then
                 scene:load(game_over)
@@ -129,7 +129,7 @@ game = scene:extend({
         if (i > iy) row_offset += line_offset
       end
 
-      local y = -18 + (iy - 1) * 5 + row_offset
+      local y = -28 + (iy - 1) * 5 + row_offset
 
       for ix = 1, 9 do
         local x = 3 + (ix - 1) * 5
@@ -215,7 +215,18 @@ game = scene:extend({
     end
 
     -- attempt to move rotated piece to a valid position
-    for offset in all({{0, -1},{0, -2},{-1, 0},{1, 0},{-2, 0},{2, 0}}) do
+    local potential_moves = {
+      {0, -1},
+      {0, -2},
+      {-1, -1},
+      {1, -1},
+      {-1, 0},
+      {1, 0},
+      {-2, 0},
+      {2, 0}
+    }
+
+    for offset in all(potential_moves) do
       if _ENV:valid_position(cx + offset[1], cy + offset[2]) then
         current_piece.x += offset[1]
         current_piece.y += offset[2]
@@ -345,7 +356,7 @@ game = scene:extend({
             -- spawn particles
             particle({
               x = 1 + x * 5,
-              y = -20 + y * 5,
+              y = -30 + y * 5,
               frames = 25 + rnd(10),
               gravity_scale = -0.25,
               radius = {2, 0},
@@ -384,7 +395,7 @@ game = scene:extend({
       end
 
       -- fill grid with empty rows
-      while #grid < 16 do
+      while #grid < 18 do
         add(grid, {0,0,0,0,0,0,0,0,0}, 1)
       end
 
