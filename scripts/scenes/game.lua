@@ -11,12 +11,16 @@ game = scene:extend({
     end
 
     -- initial game state
+    max_music_speed = 16
+    min_music_speed = 8
     line_offset = 0
     max_drop_timer = 60
     max_timer_resets = 15
     points = 0
     lines = 0
     level = 1
+
+    _ENV:set_music_speed(max_music_speed)
 
     -- setup piece bag
     piece_index = 1
@@ -342,12 +346,20 @@ game = scene:extend({
 
   load_next_level = function(_ENV)
     -- todo: level change animation
+    level += 1
+    lines = 0
 
     -- increase drop speed
     max_drop_timer *= 0.8
 
-    level += 1
-    lines = 0
+    -- increase music speed
+    _ENV:set_music_speed(16 - (level - 1) / 2)
+  end,
+
+  set_music_speed = function(_ENV, speed)
+    for sfx = 11, 19 do
+      poke(0x3200 + 68 * sfx + 65, mid(min_music_speed, speed, max_music_speed))
+    end
   end,
 
   reset_drop_timer = function(_ENV)

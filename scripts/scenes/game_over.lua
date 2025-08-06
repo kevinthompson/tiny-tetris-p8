@@ -3,6 +3,7 @@ game_over = scene:extend({
     sfx(4)
     animating = true
     local grid = game.grid
+    music(-1, 1500)
 
     async(function()
       for y = #grid, 6, -1 do
@@ -30,10 +31,10 @@ game_over = scene:extend({
   draw = function(_ENV)
     game:draw()
 
-    if not animating then
-      rectfill(2, 12, 47, 20, 0)
-      ? "game over", 7, 14, 7
+    rectfill(2, 12, 47, 20, 0)
+    ? "game over", 7, 14, 7
 
+    if not animating then
       -- prompt
       rectfill(2, 42, 47, 50, 0)
 
