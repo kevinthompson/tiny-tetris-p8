@@ -103,6 +103,8 @@ game = scene:extend({
               end
             end
 
+            wait(6)
+
             -- load next piece
             _ENV:load_next_piece()
           end)

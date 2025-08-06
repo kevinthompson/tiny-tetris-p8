@@ -11,14 +11,18 @@ piece = entity:extend({
   end,
 
   draw = function(_ENV)
-    if (flashing and flr(t() * 100) % 4 == 0) return
+    local sprite = preview and 8 or id
+
+    if not preview and flashing and flr(t() * 10) % 4 == 0 then
+      sprite = 8
+    end
 
     for dy = 1, #data do
       local sy = -28 + (y + dy - 2) * 5
 
       for dx = 1, #data[1] do
         local sx = 3 + (x + dx - 2) * 5
-        if (data[dy][dx] == 1) spr(preview and 8 or id, sx, sy)
+        if (data[dy][dx] == 1) spr(sprite, sx, sy)
       end
     end
   end,

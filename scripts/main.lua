@@ -1,5 +1,6 @@
 poke(0x5f2e, 1)   -- enable alternate palette
-poke(0x5f5c, 255) -- disable key repeat
+poke(0x5f5c, 10)  -- inital key repeat delay
+poke(0x5f5d, 2)   -- key repeat delay
 poke(0x5f2c, 3)   -- set resolution to 64x64
 
 -- setup global references
